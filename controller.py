@@ -7,10 +7,8 @@ from linebot.models import QuickReplyButton
 from linebot.models import MessageAction
 from linebot.exceptions import LineBotApiError
 
-
-line_bot_api = LineBotApi(
-)
-admin_id =
+line_bot_api = LineBotApi()
+admin_id =  ""
 tags = set(['을','를','이','가', '이가','는','은', '께서','에서', '에게','에','이다','에게서','로','으로','한테','와','과'])
 personal_data=
         [
@@ -31,11 +29,11 @@ def lambda_handler(event, context):
     try:
         for e in event["events"]:
             if (e["source"]["type"] != "user"):
-                continue # User가 아닌 방 같은 경우 처리
+                return # User가 아닌 방 같은 경우 처리
         type_msg = e['type']
 
         if (type_msg != "message"):
-            continue # 메세지가 아닌 팔로우/언팔로우 처리
+            return # 메세지가 아닌 팔로우/언팔로우 처리
         user_id = e['source']['userId']
         msg = e['message']['text']
         rpl_tok = e['replyToken']
@@ -89,7 +87,6 @@ def lambda_handler(event, context):
                     print(msg) #Exception Handling(Line Bot Error)
                     print("error: in 부서 검색")
                     print(e)
-                    continue
             else:
                 with db.cursor() as cursor:
                     sql = "".join(["select site_layer_2 from site_info where site_layer_1 ='", " ".join(mSplit[2:]) ,"' group by site_layer_2;"]);
@@ -98,7 +95,7 @@ def lambda_handler(event, context):
                     result_list = []
                     for temp in result:
                         result_list.append(temp[0])
-                    if(len(result_list) == 0)
+                    if len(result_list) == 0:
                         line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지 않거나 잘못 입력된 부처명 입니다.",
                             quick_reply = QuickReply(items=[
                                 QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
@@ -126,7 +123,6 @@ def lambda_handler(event, context):
                     print(msg) #Exception Handling(Line Bot Error)
                     print("error: in 게시판 검색")
                     print(e)
-                    continue
             else:
                 with db.cursor() as cursor:
                     sql = "".join(["select site_layer_3 from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
@@ -250,7 +246,6 @@ def lambda_handler(event, context):
                         print('msg')
                         print('error in 고급 구독 취소 실패 사이트 없음') #Exception Handling(Line Bot Error)
                         print(e)
-                        continue
                 else:#고급구독 취소
                     word = mSplit[1]
                     coord = "".join(mSplit[2:])
@@ -267,7 +262,6 @@ def lambda_handler(event, context):
                             print('msg')
                             print('error in 고급 구독 취소 사이트 실패') #Exception Handling(Line Bot Error)
                             print(e)
-                            continue
                     else:
                         with db.cursor() as cursor:
                             sql = "".join(["select site_id from site_info where site_layer_1 = '",site[0], " ' and site_layer_2 = '" ,site[1], "'and site_layer_3 = '", site[2],"'" ])
@@ -281,17 +275,16 @@ def lambda_handler(event, context):
             else: #명령어: 고급구독 (키워드) (부처,부서,게시판)
                 if len(mSplit) < 3:
                   #메세지
-                try:
-                    line_bot_api.reply_message(rpl_tok, TextSendMessage(text="고급구독 [키워드] [부처,부서,게시판] 을 입력하여야 합니다.\n 부처 목록은 [부처 검색] 명령어를 입력해주세요.",
-                        quick_reply = QuickReply(items=[
-                            QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
-                            QuickReplyButton(action = MessageAction(label="부처목록",text="부처 검색"))
-                            ])))
-                except LineBotApiError as e:
-                    print('msg')
-                    print('error in 고급 구독실패') #Exception Handling(Line Bot Error)
-                    print(e)
-                    continue
+                    try:
+                        line_bot_api.reply_message(rpl_tok, TextSendMessage(text="고급구독 [키워드] [부처,부서,게시판] 을 입력하여야 합니다.\n 부처 목록은 [부처 검색] 명령어를 입력해주세요.",
+                            quick_reply = QuickReply(items=[
+                                QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                QuickReplyButton(action = MessageAction(label="부처목록",text="부처 검색"))
+                                ])))
+                    except LineBotApiError as e:
+                        print('msg')
+                        print('error in 고급 구독실패') #Exception Handling(Line Bot Error)
+                        print(e)
                 else:
                     word = mSplit[1]
                     coord = "".join(mSplit[2:])
@@ -308,7 +301,6 @@ def lambda_handler(event, context):
                             print('msg')
                             print('error in 고급 구독정상 상황') #Exception Handling(Line Bot Error)
                             print(e)
-                            continue
                     else:
                           #pass #SQL 여기(고급구독 등록)
                         sql = "".join(["select site_id from site_info where site_layer_1 = '",site[0], " ' and site_layer_2 = '" ,site[1], "'and site_layer_3 = '", site[2],"'" ])
