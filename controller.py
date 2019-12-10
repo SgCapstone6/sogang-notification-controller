@@ -1,0 +1,318 @@
+mport json
+import pymysql
+from linebot import LineBotApi
+from linebot.models import TextSendMessage
+from linebot.models import QuickReply
+from linebot.models import QuickReplyButton
+from linebot.models import MessageAction
+from linebot.exceptions import LineBotApiError
+
+
+def lambda_handler(event, context):
+    # TODO implement
+  for e in event["events"]:
+    if (e["source"]["type"] != "user"):
+      continue # User가 아닌 방 같은 경우 처리
+    type_msg = e['type']
+    
+    if (type_msg != "message"):
+      continue # 메세지가 아닌 팔로우/언팔로우 처리
+    user_id = e['source']['userId']
+    msg = e['message']['text']
+    rpl_tok = e['replyToken']
+    db = pymysql.connect(host = personal_data[0], port =3306,
+        user = personal_data[1],
+        passwd = personal_data[2],
+        db = personal_data[3],
+        charset = 'utf8')
+    
+        
+    mSplit = msg.split(' ');
+    if len(mSplit) < 1:
+      continue;
+    if mSplit[0] == "도움말":
+      reply(rpl_tok,"####도움말####\n"+\
+                    "가능한 명령어 목록입니다.\n"+\
+                    "1. 부처 검색\n"+\
+                    "2. 부서 검색[부처 명]\n"+\
+                    "3. 게시판 검색[부서명]\n"+\
+                    "4. 사이트 구독 [부처] [부서]\n"+\
+                    "5. 사이트 구독 취소[부처] [부서] [게시판]\n"+\
+                    "6. 키워드 구독 [키워드]\n"+\
+                    "7. 키워드 구독 취소[키워드]\n"+\
+                    "8. 구독 목록\n"+\
+                    "\n모든 명령어는 예시처럼 공백으로 구분되어야 합니다.\n")
+
+    elif mSplit[0] == "문의": # 문의 사항 전송 
+      if len(mSplit) >1:
+        send(admin_id,user_id + " : "+ " ".join(mSplit[1:]));
+        reply(rpl_tok,"문의 사항을 전송했습니다.");
+      else:
+        reply(rpl_tok,"[문의 (문의사항 내용)]의 형식으로 보내야 합니다. ");
+
+    elif len(mSplit) > 1 and mSplit[0] == "부처" and mSplit[1] == "검색" : #명령어 : 부처 검색
+      sql = "select site_layer_1 from site_info group by site_layer_1"
+      with db.cursor() as cursor:
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        name_list = []
+        for temp in result:
+          name_list.append(temp[0])
+        reply(rpl_tok,'\n'.join(name_list));
+          
+      
+    elif len(mSplit) > 1 and mSplit[0] == "부서" and mSplit[1] == "검색": # 명령어 : 부서 검색 [부처명]
+      if len(mSplit) < 3:
+        try:
+          line_bot_api.reply_message(rpl_tok, TextSendMessage(text="부서 검색 [부처명] 을 입력하여야 합니다.",
+                                                          quick_reply = QuickReply(items=[
+                                                          QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                                          QuickReplyButton(action = MessageAction(label="부처 목록",text="부처 검색"))
+                                                          ])))
+        except LineBotApiError as e:
+          print('error') #Exception Handling(Line Bot Error)
+          print(e)
+          continue
+      else:
+        sql = "".join(["select site_layer_2 from site_info where site_layer_1 ='", " ".join(mSplit[2:]) ,"' group by site_layer_2;"]);
+        with db.cursor() as cursor:
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            result_list = []
+            for temp in result:
+                result_list.append(temp[0])
+            if(len(temp) == 0)
+                line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지 않거나 잘못 입력된 부처명 입니다.\n",
+                                                          quick_reply = QuickReply(items=[
+                                                          QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                                          QuickReplyButton(action = MessageAction(label="부처 목록",text="부처 검색"))
+                                                          ])))
+            else:
+                reply(rpl_tok,'\n'.join(result_list))
+        
+        
+    elif len(mSplit) > 1 and mSplit[0] == "게시판" and mSplit[1] == "검색": # 명령어 : 게시판 검색 [부서명]
+      if len(mSplit) < 3:
+        try:
+          line_bot_api.reply_message(rpl_tok, TextSendMessage(text="게시판 검색 [부서명] 을 입력하여야 합니다.\n 부서 목록은 [부서 검색 [부처명]] 명령어를 입력해주세요.",
+                                                          quick_reply = QuickReply(items=[
+                                                          QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                                          QuickReplyButton(action = MessageAction(label="부처 목록",text="부처 검색"))
+                                                          ])))
+        except LineBotApiError as e:
+              print('error') #Exception Handling(Line Bot Error)
+              print(e)
+              continue
+      else:
+        sql = "".join(["select site_layer_3 from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
+        with db.cursor() as cursor:
+          cursor.execute(sql)
+          result = cursor.fetchall()
+          result_list = []
+          for temp in result:
+            result_list.append(temp[0])
+          reply(rpl_tok,'\n'.join(result_list));
+        
+        
+    elif len(mSplit) > 1 and mSplit[0] == "키워드" and mSplit[1] == "구독":
+      if len(mSplit) < 3:
+        reply(rpl_tok,"키워드 구독 (취소 or 키워드) [키워드] 를 입력하여야 합니다.");
+      else:
+        if mSplit[2] == "취소":
+          if len(mSplit) <4:
+            reply(rpl_tok,"키워드 구독 취소 [키워드] 를 입력하여야 합니다.");
+          else:
+            #word = " ".join(mSplit[3])한글자로 수정,나중에 여러글자 지줭ㄴ
+            word = mSplit[3]
+            sql = 'delete from word_subscribe where word = %s and user_id = %s'
+            with db.cursor() as cursor:
+              cursor.execute(sql,(word,user_id))
+            db.commit()
+            reply(rpl_tok," ".join(["키워드",mSplit[3],"구독 취소 완료되었습니다."]))
+            
+        else:
+          if len(mSplit) < 3:
+            reply(rpl_tok,"키워드 구독 [키워드] 를 입력하여야 합니다.")
+          #word = " ".join(mSplit[2:])
+          word = mSplit[2]
+          if len(word) < 2 or set(mSplit[2:]).issubset(tags):
+            reply(rpl_tok,"키워드가 너무 짧거나, 불량합니다")
+          else:
+            sql = 'insert into word_subscribe value(%s,%s)'
+            with db.cursor() as cursor:
+              cursor.execute(sql,(word,user_id))
+            db.commit()
+            reply(rpl_tok," ".join(["키워드",mSplit[2],"구독 완료되었습니다."]))
+            
+      
+      
+    elif len(mSplit) > 1 and mSplit[0] == "게시판" and mSplit[1] == "구독":
+      if len(mSplit) < 3:
+        reply(rpl_tok,"게시판 구독 (취소) [부처 부서 게시판] 을 입력하여야 합니다.");
+      else:
+        if mSplit[2] == "취소":
+          if len(mSplit) <4:
+            reply(rpl_tok,"게시판 구독 취소 [부처], [부서], [게시판] 을 입력하여야 합니다.");
+          else:
+            coord = " ".join(mSplit[3:])
+            site = coord.split(',')
+            site = list(map(str.strip,site))
+            if len(site) < 3:
+              reply(rpl_tok,"게시판 구독 취소 [부처], [부서], [게시판] 을 입력하여야 합니다.");
+            else:
+              sql = "".join(["select site_id from site_info where site_layer_1 = '",site[0], " ' and site_layer_2 = '" ,site[1], "'and site_layer_3 = '", site[2],"'" ]) 
+              with db.cursor() as cursor:
+                cursor.execute(sql)
+                row = cursor.fetchall()
+              site_id = row[0][0]
+              sql = 'delete from site_subscribe where user_id = %s and sitd_id = %s'
+              with db.cursor() as cursor:
+                cursor.execute(sql,(user_id,site_id))
+              db.commit()
+              reply(rpl_tok," ".join(["게시판",site[1],site[2],"구독 취소 완료되었습니다."]))
+              #교목처, 교목부, 게시판 이렇게 들어오면 안되네요
+              
+        else:
+          if len(mSplit) < 3 :
+            reply(rpl_tok,"게시판 구독 [부처], [부서], [게시판] 을 입력하여야 합니다.");
+          else:
+            coord = " ".join(mSplit[2:])
+            site = coord.split(',')
+            site = list(map(str.strip,site))
+            if len(site) < 3:
+              reply(rpl_tok,"게시판 구독 [부처], [부서], [게시판] 을 입력하여야 합니다.");
+            else:
+            
+              sql = "".join(["select site_id from site_info where site_layer_1 = '"+site[0]+"' and site_layer_2 = '"+site[1]+"' and site_layer_3 = '"+site[2]+"'" ]) 
+              with db.cursor() as cursor:
+                print(sql)
+                cursor.execute(sql)
+                row = cursor.fetchall()
+              site_id=row[0][0]
+              sql = 'insert into site_subscribe Value(%s,%s)'
+              with db.cursor() as cursor:
+                cursor.execute(sql,(site_id,user_id))
+              db.commit()
+              reply(rpl_tok," ".join(["게시판",site[1],site[2],"구독 완료되었습니다."]))
+              
+              
+              
+    elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "조회":
+      sql = 'select word from word_subscribe where user_id = %s'
+      with db.cursor() as cursor:
+        cursor.execute(sql,user_id)
+        rows = cursor.fetchall()
+      
+        temp = "구독 키워드:\n"
+        for row in rows:
+          temp +=row[0]+'\n'
+          
+        send(user_id,temp)
+      
+        sql= 'select sl.site_layer_1,sl.site_layer_2,sl.site_layer_3 from site_info as sl, site_subscribe as ss where ss.user_id = %s and ss.site_id = sl.site_id'
+        cursor.execute(sql,user_id)
+        rows = cursor.fetchall()
+      
+        temp = "구독 게시판:\n"
+      
+        for row in rows:
+          temp +=row[0] +' ' +row[1]+' '+row[2] +'\n'
+        send(user_id,temp);
+    elif mSplit[0] == "고급구독":
+      if len(mSplit) > 1 and mSplit[1] == "취소":
+        if len(mSplit)<4 :
+           #메세지
+          try:
+            line_bot_api.reply_message(rpl_tok, TextSendMessage(text="고급구독 취소 [키워드] [부처,부서,게시판] 을 입력하여야 합니다.\n 부처 목록은 [부처 검색] 명령어를 입력해주세요.",
+                                                          quick_reply = QuickReply(items=[
+                                                          QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                                          QuickReplyButton(action = MessageAction(label="부처목록",text="부처 검색"))
+                                                          ])))
+          except LineBotApiError as e:
+            print('error') #Exception Handling(Line Bot Error)
+            print(e)
+            continue
+        else:
+          word = mSplit[1] 
+          coord = "".join(mSplit[2:])
+          site = coord.split(",")
+          site = list(map(str.strip,site))
+          if len(site) < 3:
+            try:
+              line_bot_api.reply_message(rpl_tok, TextSendMessage(text="고급구독 취소 [키워드] [부처,부서,게시판] 을 입력하여야 합니다.\n 부처 목록은 [부처 검색] 명령어를 입력해주세요.",
+                                                          quick_reply = QuickReply(items=[
+                                                          QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                                          QuickReplyButton(action = MessageAction(label="부처목록",text="부처 검색"))
+                                                          ])))
+            except LineBotApiError as e:
+              print('error') #Exception Handling(Line Bot Error)
+              print(e)
+              continue
+          else:
+            #pass
+            ##SQL 여기에!(고급구독 취소)
+            reply(rpl_tok," ".join(["게시판",site[1],site[2],"키워드",word,"구독 취소 완료되었습니다."]))
+          
+      else: #명령어: 고급구독 (키워드) (부처,부서,게시판)
+        if len(mSplit) < 3:
+          #메세지
+          try:
+            line_bot_api.reply_message(rpl_tok, TextSendMessage(text="고급구독 [키워드] [부처,부서,게시판] 을 입력하여야 합니다.\n 부처 목록은 [부처 검색] 명령어를 입력해주세요.",
+                                                          quick_reply = QuickReply(items=[
+                                                          QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                                          QuickReplyButton(action = MessageAction(label="부처목록",text="부처 검색"))
+                                                          ])))
+          except LineBotApiError as e:
+            print('error') #Exception Handling(Line Bot Error)
+            print(e)
+            continue
+        else:
+          word = mSplit[1]
+          coord = "".join(mSplit[2:])
+          site = coord.split(",")
+          site = list(map(str.strip,site))
+          if len(site) < 3:
+            try:
+              line_bot_api.reply_message(rpl_tok, TextSendMessage(text="고급구독 취소 [키워드] [부처,부서,게시판] 을 입력하여야 합니다.\n 부처 목록은 [부처 검색] 명령어를 입력해주세요.",
+                                        quick_reply = QuickReply(items=[
+                                        QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
+                                        QuickReplyButton(action = MessageAction(label="부처목록",text="부처 검색"))
+                                        ])))
+            except LineBotApiError as e:
+              print('error') #Exception Handling(Line Bot Error)
+              print(e)
+              continue
+          else:
+            #pass #SQL 여기(고급구독 등록)
+            reply(rpl_tok," ".join(["게시판",site[1],site[2],"키워드",word,"구독 완료되었습니다."]))
+        #site = [0] [1] [2] 순으로 부처 부서 게시판
+        #word에 키워드
+        #예외처리하기
+         
+#   tmp_tag = set(msg.split(' '))
+#   if tmp_tag.issubset(tags) :
+#   pass
+      #error_handler(Keyword Error)
+      
+    
+#    reply(rpl_tok,msg)
+#    send(user_id,msg)
+    db.close()
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps(event),
+    }
+    
+def send (uId, string): #send string to uId
+  try:
+    line_bot_api.push_message(uId, TextSendMessage(string))
+  except LineBotApiError as e:
+    print("error"); #Exception Handling(Line Bot Error)
+    
+def reply(tok, string): #send reply to token
+  try:
+    line_bot_api.reply_message(tok, TextSendMessage(string))
+  except LineBotApiError as e:
+    print('error') #Exception Handling(Line Bot Error)
+    print(e)
