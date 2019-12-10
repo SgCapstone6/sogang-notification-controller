@@ -1,5 +1,6 @@
 import json
 import pymysql
+import traceback
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 from linebot.models import QuickReply
@@ -53,8 +54,8 @@ def lambda_handler(event, context):
                     "5. 사이트 구독 취소[부처], [부서], [게시판]\n"+\
                     "6. 키워드 구독 [키워드]\n"+\
                     "7. 키워드 구독 취소[키워드]\n"+\
-                    "8. 고급구독 [부처], [부서], [게시판]\n"+\
-                    "9. 고급구독 취소[키워드]\n"+\
+                    "8. 고급구독 [키워드] [부처], [부서], [게시판]\n"+\
+                    "9. 고급구독 취소 [키워드] [부처], [부서], [게시판]\n"+\
                     "10. 구독 조회\n"+\
                     "\n*모든 명령어는 예시처럼 공백이나 쉼표(,) 로 구분되어야 합니다*")
 
@@ -215,13 +216,19 @@ def lambda_handler(event, context):
 
         elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "조회":
             with db.cursor() as cursor:
-                sql = 'select word from word_subscribe where user_id = %s'
+                sql = 'select word,site_id from word_subscribe where user_id = %s'
                 cursor.execute(sql,user_id)
                 rows = cursor.fetchall()
 
                 temp = "구독 키워드:\n"
-                for row in rows:
-                    temp +=row[0]+'\n'
+		for row in rows:
+                    if row[1] != 0:
+                        sql= 'select site_layer_1,site_layer_2,site_layer_3 from site_info where site_id = %s'
+                        cursor.execute(sql,row[1])
+                        site_infos = cursor.fetchall()
+                        temp += row[0] + '-' + site_infos[0][0] +' '+ site_infos[0][1] +' '+ site_infos[0][2] + '\n'
+                    else:
+                        temp +=row[0]+'\n'
                 send(user_id,temp)
 
                 sql= 'select sl.site_layer_1,sl.site_layer_2,sl.site_layer_3 from site_info as sl, site_subscribe as ss where ss.user_id = %s and ss.site_id = sl.site_id'
@@ -270,6 +277,7 @@ def lambda_handler(event, context):
                             site_id = row[0][0]
                             sql = 'delete from word_subscribe where user_id = %s and sitd_id = %s and word = %s'
                             cursor.execute(sql,(user_id,site_id,word))
+                            db.commit()
                             reply(rpl_tok," ".join(["게시판",site[1],site[2],"키워드",word,"구독 취소 완료되었습니다."]))
 
             else: #명령어: 고급구독 (키워드) (부처,부서,게시판)
@@ -303,21 +311,23 @@ def lambda_handler(event, context):
                             print(e)
                     else:
                           #pass #SQL 여기(고급구독 등록)
-                        sql = "".join(["select site_id from site_info where site_layer_1 = '",site[0], " ' and site_layer_2 = '" ,site[1], "'and site_layer_3 = '", site[2],"'" ])
-                        cursor.execute(sql)
-                        row = cursor.fetchall()
-                        site_id = row[0][0]
-                        sql = 'insert into word_subscribe Value(%s,%s,%s)'
-                        cursor.execute(sql,(word,user_id,site_id))
-                        reply(rpl_tok," ".join(["게시판",site[1],site[2],"키워드",word,"구독 완료되었습니다."]))
+                        with db.cursor() as cursor:
+                            sql = "".join(["select site_id from site_info where site_layer_1 = '",site[0], " ' and site_layer_2 = '" ,site[1], "'and site_layer_3 = '", site[2],"'" ])
+                            cursor.execute(sql)
+                            row = cursor.fetchall()
+                            site_id = row[0][0]
+                            sql = 'insert into word_subscribe Value(%s,%s,%s)'
+                            cursor.execute(sql,(word,user_id,site_id))
+                            db.commit()
+                            reply(rpl_tok," ".join(["게시판",site[1],site[2],"키워드",word,"구독 완료되었습니다."]))
         else:
             reply(rpl_tok,"잘못된 명령어 입니다.")
             #site = [0] [1] [2] 순으로 부처 부서 게시판
             #word에 키워드
             #예외처리하기
     except Exception as e:
-        print(e)
-        print(msg)
+        print("MSG:"+msg)
+        print(traceback.format_exc())
     finally:
         db.close()
     #   tmp_tag = set(msg.split(' '))
