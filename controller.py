@@ -253,8 +253,8 @@ def lambda_handler(event, context):
                         print('error in 고급 구독 취소 실패 사이트 없음') #Exception Handling(Line Bot Error)
                         print(e)
                 else:#고급구독 취소
-                    word = mSplit[1]
-                    coord = "".join(mSplit[2:])
+                    word = mSplit[2]
+                    coord = "".join(mSplit[3:])
                     site = coord.split(",")
                     site = list(map(str.strip,site))
                     if len(site) < 3:
@@ -274,7 +274,7 @@ def lambda_handler(event, context):
                             cursor.execute(sql)
                             row = cursor.fetchall()
                             site_id = row[0][0]
-                            sql = 'delete from word_subscribe where user_id = %s and sitd_id = %s and word = %s'
+                            sql = 'delete from word_subscribe where user_id = %s and site_id = %s and word = %s'
                             cursor.execute(sql,(user_id,site_id,word))
                             db.commit()
                             reply(rpl_tok," ".join(["게시판",site[1],site[2],"키워드",word,"구독 취소 완료되었습니다."]))
