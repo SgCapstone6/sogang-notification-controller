@@ -186,11 +186,10 @@ def lambda_handler(event, context):
                                 cursor.execute(sql)
                                 row = cursor.fetchall()
                                 site_id = row[0][0]
-                                sql = 'delete from site_subscribe where user_id = %s and sitd_id = %s'
+                                sql = 'delete from site_subscribe where user_id = %s and site_id = %s'
                                 cursor.execute(sql,(user_id,site_id))
                                 db.commit()
                                 reply(rpl_tok," ".join(["게시판",site[1],site[2],"구독 취소 완료되었습니다."]))
-                          #교목처, 교목부, 게시판 이렇게 들어오면 안되네요
 
                 else:               #게시판 구독 부처, 부서, 게시판
                     if len(mSplit) < 3 :
