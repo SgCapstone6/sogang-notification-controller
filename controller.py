@@ -97,7 +97,7 @@ def lambda_handler(event, context):
                     for temp in result:
                         result_list.append(temp[0])
                     if len(result_list) == 0:
-                        line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지 않거나 잘못 입력된 부처명 입니다.",
+                        line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지 않거나 잘못 입력된 부서명 입니다.",
                             quick_reply = QuickReply(items=[
                                 QuickReplyButton(action = MessageAction(label="도움말",text="도움말")),
                                 QuickReplyButton(action = MessageAction(label="부처 목록",text="부처 검색"))
@@ -126,24 +126,24 @@ def lambda_handler(event, context):
                     print(e)
             else:
                 with db.cursor() as cursor:
-                    sql = "".join(["select site_layer_3 from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
+                    sql = "".join(["select site_layer_3, site_url from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     result_list = []
+                    url_list = []
                     for temp in result:
                         result_list.append(temp[0])
+                        url_list.append(temp[1])
                     if len(result_list) == 0:
                         line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지않거나 잘못 입력된 부서명 입니다.\n",
                             quick_reply = QuickReply(items=[
                                 QuickReplyButton(action = MessageAction(label="도움말",text="도움말"))
                                 ])))
-                    else: 
-			#url_list 에url이 순서대로 들어있다는 가정, 다른 형태라면 알려주세요 
-			#[게시판(http://foo.bar)] 형태로 출력 
-			url_list = list(map("({0})".format,url_list))
-			with_url = list(zip(result_list, url_list))
+                    else:
+                        url_list = list(map("({0})".format,url_list))
+                        with_url = list(zip(result_list, url_list))
                         with_url = list(map("".join,with_url))
-			reply(rpl_tok,'\n'.join(with_url) );
+                        reply(rpl_tok,'\n'.join(with_url) );
 
 
         elif len(mSplit) > 1 and mSplit[0] == "키워드" and mSplit[1] == "구독":
@@ -223,9 +223,8 @@ def lambda_handler(event, context):
                 sql = 'select word,site_id from word_subscribe where user_id = %s'
                 cursor.execute(sql,user_id)
                 rows = cursor.fetchall()
-
                 temp = "구독 키워드:\n"
-		for row in rows:
+                for row in rows:
                     if row[1] != 0:
                         sql= 'select site_layer_1,site_layer_2,site_layer_3 from site_info where site_id = %s'
                         cursor.execute(sql,row[1])
