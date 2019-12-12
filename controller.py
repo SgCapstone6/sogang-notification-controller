@@ -104,12 +104,16 @@ def lambda_handler(event, context):
                                 ])))
                     else:
                         item_list = []
-                        """
+                        
                         for result in result_list:
-                            item_list.append(QuickReplyButton(action = MessageAction(label = result,text=result)))
-                        line_bot_api.reply_message(rpl_tok,TextSendMessage(text=".",quick_reply = QuickReply(items= item_list)))
-                        """
-                        reply(rpl_tok,'\n'.join(result_list))
+                            item_list.append(QuickReplyButton(action = MessageAction(label = result,text= "게시판 검색 "+" ".join(mSplit[2:])+","+result)))
+                        try:
+                            line_bot_api.reply_message(rpl_tok,TextSendMessage(text=".",quick_reply = QuickReply(items= item_list)))
+                        except LineBotApiError as e:
+                            print(msg) #Exception Handling(Line Bot Error)
+                            print("error: in 부서 검색 버튼")
+                            print(e)
+                        #reply(rpl_tok,'\n'.join(result_list))
 
 
         elif len(mSplit) > 1 and mSplit[0] == "게시판" and mSplit[1] == "검색": # 명령어 : 게시판 검색 [부서명]
@@ -143,7 +147,9 @@ def lambda_handler(event, context):
                         url_list = list(map("({0})".format,url_list))
                         with_url = list(zip(result_list, url_list))
                         with_url = list(map("".join,with_url))
-                        reply(rpl_tok,'\n'.join(with_url) );
+                        reply(rpl_tok,'\n'.join(with_url)); #URL 답신
+                   
+                       
 
 
         elif len(mSplit) > 1 and mSplit[0] == "키워드" and mSplit[1] == "구독":
