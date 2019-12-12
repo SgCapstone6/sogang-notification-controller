@@ -106,7 +106,7 @@ def lambda_handler(event, context):
                         item_list = []
                         
                         for result in result_list:
-                            item_list.append(QuickReplyButton(action = MessageAction(label = result,text= "게시판 검색 "+" ".join(mSplit[2:])+","+result)))
+                            item_list.append(QuickReplyButton(action = MessageAction(label = result,text= "게시판 검색 "+result)))
                         try:
                             line_bot_api.reply_message(rpl_tok,TextSendMessage(text=".",quick_reply = QuickReply(items= item_list)))
                         except LineBotApiError as e:
