@@ -126,12 +126,14 @@ def lambda_handler(event, context):
                     print(e)
             else:
                 with db.cursor() as cursor:
-                    sql = "".join(["select site_layer_3 from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
+                    sql = "".join(["select site_layer_3, site_url from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     result_list = []
+                    url_list = []
                     for temp in result:
                         result_list.append(temp[0])
+                        url_list.append(temp[1])
                     if len(result_list) == 0:
                         line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지않거나 잘못 입력된 부서명 입니다.\n",
                             quick_reply = QuickReply(items=[
