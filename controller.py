@@ -137,8 +137,13 @@ def lambda_handler(event, context):
                             quick_reply = QuickReply(items=[
                                 QuickReplyButton(action = MessageAction(label="도움말",text="도움말"))
                                 ])))
-                    else:
-                        reply(rpl_tok,'\n'.join(result_list));
+                    else: 
+			#url_list 에url이 순서대로 들어있다는 가정, 다른 형태라면 알려주세요 
+			#[게시판(http://foo.bar)] 형태로 출력 
+			url_list = list(map("({0})".format,url_list))
+			with_url = list(zip(result_list, url_list))
+                        with_url = list(map("".join,with_url))
+			reply(rpl_tok,'\n'.join(with_url) );
 
 
         elif len(mSplit) > 1 and mSplit[0] == "키워드" and mSplit[1] == "구독":
