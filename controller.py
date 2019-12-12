@@ -242,6 +242,15 @@ def lambda_handler(event, context):
                 for row in rows:
                     temp +=row[0] +' ' +row[1]+' '+row[2] +'\n'
                 send(user_id,temp);
+       
+        elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "최신글":
+            #SQL
+            #result_list = [ [제목,URL] , [제목,URL] ,.... ] 형태
+            reply(rpl_tok,"현재 구독사항 최신 글은 다음과 같습니다")
+            for result in result_list:
+                reply(rpl_tok, result[0] + "\n" +result[1]);
+      
+                
         elif mSplit[0] == "고급구독":
             if len(mSplit) > 1 and mSplit[1] == "취소":
                 if len(mSplit)<4 :
