@@ -11,9 +11,7 @@ from linebot.exceptions import LineBotApiError
 line_bot_api = LineBotApi()
 admin_id =  ""
 tags = set(['을','를','이','가', '이가','는','은', '께서','에서', '에게','에','이다','에게서','로','으로','한테','와','과'])
-personal_data=
-        [
-        ]
+personal_data=[]
 def lambda_handler(event, context):
     # TODO implement
     msg = ''
@@ -47,6 +45,7 @@ def lambda_handler(event, context):
         if mSplit[0] == "도움말":
             reply(rpl_tok,"####도움말####\n"+\
                     "가능한 명령어 목록입니다.\n"+\
+                    "0. 구독 최신글\n"+\
                     "1. 부처 검색\n"+\
                     "2. 부서 검색[부처 명]\n"+\
                     "3. 게시판 검색[부서명]\n"+\
@@ -58,6 +57,55 @@ def lambda_handler(event, context):
                     "9. 고급구독 취소 [키워드] [부처], [부서], [게시판]\n"+\
                     "10. 구독 조회\n"+\
                     "\n*모든 명령어는 예시처럼 공백이나 쉼표(,) 로 구분되어야 합니다*")
+        elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "최신글":
+            #SQL
+            #result_list = [ [제목,URL] , [제목,URL] ,.... ] 형태
+            with db.cursor() as cursor:
+                word_sub_list = []
+                site_sub_list = []
+                sql = 'select * from site_subscribe where user_id = %s'
+                cursor.execute(sql,user_id)
+                results = cursor.fetchall()
+                for result in results:
+                    site_id, user_id_in_db = result[0],result[1]
+                    if user_id == user_id_in_db:
+                        site_sub_list.append(site_id)
+                sql = 'select * from word_subscribe where user_id = %s'
+                cursor.execute(sql,user_id)
+                results = cursor.fetchall()
+                for result in results:
+                    word,user_id_in_db,site_id = result[0],result[1],result[2]
+                    if user_id == user_id_in_db:
+                        word_sub_list.append((word,site_id))
+                sql = 'select * from crawling_datas'
+                cursor.execute(sql)
+                results = cursor.fetchall()
+                tokens = {}
+                result_str = ''
+                for result in results:
+                    try:
+                        title,site_id = result[0],result[1]
+                        for site in site_sub_list:
+                            if site_id is site:
+                                result_str += '사이트 구독\n'
+                                raise Exception('')
+                        for word,site_sub in word_sub_list:
+                            if word in title:
+                                if site_sub is 0 :
+                                    result_str += '키워드 구독\n'
+                                    raise Exception('')
+                                elif site_sub is site_id :
+                                    result_str += '고급 구독\n'
+                                    raise Exception('')
+                    except Exception as e:
+                        sql = 'select site_url from site_info where site_id = %s'
+                        cursor.execute(sql,site_id)
+                        result = cursor.fetchall()
+                        site_url = result[0][0]
+                        result_str += title+'\n' + site_url+'\n'
+                if result_str == '':
+                    result_str = '구독 목록과 일치하는 관련 최신글이 없습니다'
+                reply(rpl_tok,result_str)
 
         elif mSplit[0] == "문의": # 문의 사항 전송 
             if len(mSplit) >1:
@@ -241,16 +289,7 @@ def lambda_handler(event, context):
                 temp = "구독 게시판:\n"
                 for row in rows:
                     temp +=row[0] +' ' +row[1]+' '+row[2] +'\n'
-                send(user_id,temp);
-       
-        elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "최신글":
-            #SQL
-            #result_list = [ [제목,URL] , [제목,URL] ,.... ] 형태
-            reply(rpl_tok,"현재 구독사항 최신 글은 다음과 같습니다")
-            for result in result_list:
-                reply(rpl_tok, result[0] + "\n" +result[1]);
-      
-                
+                send(user_id,temp)
         elif mSplit[0] == "고급구독":
             if len(mSplit) > 1 and mSplit[1] == "취소":
                 if len(mSplit)<4 :
