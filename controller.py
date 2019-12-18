@@ -122,8 +122,15 @@ def lambda_handler(event, context):
                 name_list = []
                 for temp in result:
                     name_list.append(temp[0])
-                reply(rpl_tok,'\n'.join(name_list));
-
+                item_list = []
+                for i in range(0,min(len(name_list),13)):
+                    item_list.append(QuickReplyButton(action = MessageAction(label = name_list[i] + "검색",text="부서 검색 "+name_list[i])))
+                try:
+                    line_bot_api.reply_message(rpl_tok, TextSendMessage(text='\n'.join(name_list) , quick_reply = QuickReply(items = item_list)))
+                except LineBotApiError as e:
+                    print(msg) #Exception Handling(Line Bot Error)
+                    print("error: in 부처 검색")
+                    print(e)    
         elif len(mSplit) > 1 and mSplit[0] == "부서" and mSplit[1] == "검색": # 명령어 : 부서 검색 [부처명]
             if len(mSplit) < 3:
                 try:
@@ -152,12 +159,14 @@ def lambda_handler(event, context):
                                 ])))
                     else:
                         item_list = []
-                        """
-                        for result in result_list:
-                            item_list.append(QuickReplyButton(action = MessageAction(label = result,text=result)))
-                        line_bot_api.reply_message(rpl_tok,TextSendMessage(text=".",quick_reply = QuickReply(items= item_list)))
-                        """
-                        reply(rpl_tok,'\n'.join(result_list))
+                        for i in range(len(result_list),13):
+                            item_list.append(QuickReplyButton(action = MessageAction(label = result_list[i] + " 검색" , text= "게시판 검색 " + result_list[i])))
+                        try:
+                            line_bot_api.reply_message(rpl_tok,TextSendMessage(text='\n'.join(result_list),quick_reply = QuickReply(items= item_list)))
+                        except LineBotApiError as e:
+                            print(msg) #Exception Handling(Line Bot Error)
+                            print("error: in 게시판 검색")
+                            print(e)
 
 
         elif len(mSplit) > 1 and mSplit[0] == "게시판" and mSplit[1] == "검색": # 명령어 : 게시판 검색 [부서명]
@@ -191,7 +200,16 @@ def lambda_handler(event, context):
                         url_list = list(map("({0})".format,url_list))
                         with_url = list(zip(result_list, url_list))
                         with_url = list(map("".join,with_url))
-                        reply(rpl_tok,'\n'.join(with_url) );
+                        upper = ""# 여기에 부처명 넣어주세요
+                        
+                        item_list = []
+                        for i in range(0,min(13,len(result_list))):
+                            item_list.append(QuickReplyButton(action = MessageAction(label = result_list[i] + "",
+                                                                     text="게시판 구독 "+ upprer +" , "+ mSplit[2:] + " , " + result_list[i])))
+                        #reply(rpl_tok,'\n'.join(with_url) );
+                        try:
+                            line_bot_api.reply_message(rpl_tok, TextSendMessage(text='\n'.join(with_url),Quick_reply = QuickReply(items=item_list)))
+                            
 
 
         elif len(mSplit) > 1 and mSplit[0] == "키워드" and mSplit[1] == "구독":
