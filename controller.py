@@ -159,7 +159,7 @@ def lambda_handler(event, context):
                                 ])))
                     else:
                         item_list = []
-                        for i in range(len(result_list),13):
+                        for i in range(min(len(result_list),13)):
                             item_list.append(QuickReplyButton(action = MessageAction(label = result_list[i] + " 검색" , text= "게시판 검색 " + result_list[i])))
                         try:
                             line_bot_api.reply_message(rpl_tok,TextSendMessage(text='\n'.join(result_list),quick_reply = QuickReply(items= item_list)))
@@ -183,14 +183,16 @@ def lambda_handler(event, context):
                     print(e)
             else:
                 with db.cursor() as cursor:
-                    sql = "".join(["select site_layer_3, site_url from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
+                    sql = "".join(["select site_layer_1, site_layer_3, site_url from site_info where site_layer_2 ='" ," ".join(mSplit[2:]) , "';"])
                     cursor.execute(sql)
                     result = cursor.fetchall()
                     result_list = []
+                    layer_1_list = []
                     url_list = []
                     for temp in result:
-                        result_list.append(temp[0])
-                        url_list.append(temp[1])
+                        layer_1_list.append(temp[0])
+                        result_list.append(temp[1])
+                        url_list.append(temp[2])
                     if len(result_list) == 0:
                         line_bot_api.reply_message(rpl_tok,TextSendMessage(text="지원하지않거나 잘못 입력된 부서명 입니다.\n",
                             quick_reply = QuickReply(items=[
@@ -200,16 +202,18 @@ def lambda_handler(event, context):
                         url_list = list(map("({0})".format,url_list))
                         with_url = list(zip(result_list, url_list))
                         with_url = list(map("".join,with_url))
-                        upper = ""# 여기에 부처명 넣어주세요
-                        
+
                         item_list = []
                         for i in range(0,min(13,len(result_list))):
-                            item_list.append(QuickReplyButton(action = MessageAction(label = result_list[i] + "",
-                                                                     text="게시판 구독 "+ upprer +" , "+ mSplit[2:] + " , " + result_list[i])))
+                            item_list.append(QuickReplyButton(action =MessageAction(label = result_list[i] +"게시판 구독 ",text="게시판 구독 "+layer_1_list[i] +", "+' '.join(mSplit[2:]) + ", " + result_list[i])))
                         #reply(rpl_tok,'\n'.join(with_url) );
                         try:
-                            line_bot_api.reply_message(rpl_tok, TextSendMessage(text='\n'.join(with_url),Quick_reply = QuickReply(items=item_list)))
-                            
+                            line_bot_api.reply_message(rpl_tok,TextSendMessage(text='\n'.join(with_url),quick_reply = QuickReply(items=item_list)))
+                        except LineBotApiError as e:
+                            print(msg) #Exception Handling(Line Bot Error)
+                            print("error: in 게시판 검색 구독 버튼출력")
+                            print(e)
+
 
 
         elif len(mSplit) > 1 and mSplit[0] == "키워드" and mSplit[1] == "구독":
