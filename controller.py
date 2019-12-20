@@ -56,6 +56,7 @@ def lambda_handler(event, context):
                     "8. 고급구독 [키워드] [부처], [부서], [게시판]\n"+\
                     "9. 고급구독 취소 [키워드] [부처], [부서], [게시판]\n"+\
                     "10. 구독 조회\n"+\
+                    "11. 구독 모두 취소\n"+\
                     "\n*모든 명령어는 예시처럼 공백이나 쉼표(,) 로 구분되어야 합니다*")
         elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "최신글":
             #SQL
@@ -287,7 +288,7 @@ def lambda_handler(event, context):
                                 reply(rpl_tok," ".join(["게시판",site[1],site[2],"구독 완료되었습니다."]))
 
 
-
+        #구독 조회
         elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "조회":
             with db.cursor() as cursor:
                 sql = 'select word,site_id from word_subscribe where user_id = %s'
@@ -312,6 +313,16 @@ def lambda_handler(event, context):
                 for row in rows:
                     temp +=row[0] +' ' +row[1]+' '+row[2] +'\n'
                 send(user_id,temp)
+        #구독 모두 취소
+        elif len(mSplit) > 1 and mSplit[0] == "구독" and mSplit[1] == "모두" and mSplit[2] == "취소":
+            with db.cursor() as cursor:
+                sql = 'delete from word_subscribe where user_id = %s'
+                cursor.execute(sql,user_id)
+                sql = 'delete from site_subscribe where user_id = %s'
+                cursor.execute(sql,user_id)
+                send(user_id,"모든 구독 취소 완료")
+                db.commit()
+
         elif mSplit[0] == "고급구독":
             if len(mSplit) > 1 and mSplit[1] == "취소":
                 if len(mSplit)<4 :
